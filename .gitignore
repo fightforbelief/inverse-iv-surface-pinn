@@ -1,0 +1,11 @@
+# local secrets / configs
+.env
+.env.*
+*.pgpass
+*.pem
+*.key
+*_secrets.*
+/data/
+# OS / Jupyter noise
+.DS_Store
+.ipynb_checkpoints/
