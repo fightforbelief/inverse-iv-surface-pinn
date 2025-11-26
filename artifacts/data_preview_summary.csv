@@ -1,0 +1,13 @@
+file,size_mb,num_rows,num_cols,columns,preview_csv,error
+data/raw/20230103_zero_curve.parquet,0.003,11.0,3.0,"date, days, rate",artifacts/samples/20230103_zero_curve_head.csv,
+data/raw/20230103_zero_curve.parquet,,,,,,"ImportError(""Missing optional dependency 'tabulate'.  Use pip or conda to install tabulate."")"
+data/raw/SPY20230103_distr_proj.parquet,0.003,21.0,4.0,"secid, date, exdate, amount",artifacts/samples/SPY20230103_distr_proj_head.csv,
+data/raw/SPY20230103_distr_proj.parquet,,,,,,"ImportError(""Missing optional dependency 'tabulate'.  Use pip or conda to install tabulate."")"
+data/raw/SPY20230103_option_price.parquet,0.451,7470.0,26.0,"secid, date, symbol, symbol_flag, exdate, last_date, cp_flag, strike_price, best_bid, best_offer, volume, open_interest, impl_volatility, delta, gamma, vega, theta, optionid, cfadj, am_settlement, contract_size, ss_flag, forward_price, expiry_indicator, root, suffix",artifacts/samples/SPY20230103_option_price_head.csv,
+data/raw/SPY20230103_option_price.parquet,,,,,,"ImportError(""Missing optional dependency 'tabulate'.  Use pip or conda to install tabulate."")"
+data/raw/SPY20230103_security_price.parquet,,,,,,"TypeError(""float() argument must be a string or a real number, not 'NAType'"")"
+data/raw/SPY20230103_stdoption_price.parquet,0.008,22.0,12.0,"secid, date, days, forward_price, strike_price, premium, impl_volatility, delta, gamma, theta, vega, cp_flag",artifacts/samples/SPY20230103_stdoption_price_head.csv,
+data/raw/SPY20230103_stdoption_price.parquet,,,,,,"ImportError(""Missing optional dependency 'tabulate'.  Use pip or conda to install tabulate."")"
+data/raw/SPY20230103_volatility_surface.parquet,0.019,374.0,9.0,"secid, date, days, delta, impl_volatility, impl_strike, impl_premium, dispersion, cp_flag",artifacts/samples/SPY20230103_volatility_surface_head.csv,
+data/raw/SPY20230103_volatility_surface.parquet,,,,,,"ImportError(""Missing optional dependency 'tabulate'.  Use pip or conda to install tabulate."")"
+data/raw/SPY_securd.parquet,,,,,,"TypeError(""float() argument must be a string or a real number, not 'NAType'"")"
