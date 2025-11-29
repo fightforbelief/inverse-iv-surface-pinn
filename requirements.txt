@@ -1,0 +1,11 @@
+# Core scientific stack
+numpy
+pandas
+scipy
+
+# Modeling / deep learning
+torch
+
+# Visualization
+matplotlib
+seaborn

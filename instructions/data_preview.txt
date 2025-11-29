@@ -1,0 +1,662 @@
+数据预览：
+
+ticker_name = "SPY"
+date = "2023-01-03"
+
+import os
+import numpy as np
+import pandas as pd
+from dotenv import load_dotenv, find_dotenv
+from datetime import timedelta, datetime
+
+raw_data_path = os.getenv("RAW_DATA_PATH")
+date_name = date.translate(str.maketrans('', '', "-"))
+date = datetime.strptime(date, '%Y-%m-%d')
+
+# Option price
+op_df = pd.read_parquet(raw_data_path+ticker_name+date_name+"_option_price.parquet")
+op_df.head()
+
+<div>
+<style scoped>
+    .dataframe tbody tr th:only-of-type {
+        vertical-align: middle;
+    }
+
+    .dataframe tbody tr th {
+        vertical-align: top;
+    }
+
+    .dataframe thead th {
+        text-align: right;
+    }
+</style>
+<table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>secid</th>
+      <th>date</th>
+      <th>symbol</th>
+      <th>symbol_flag</th>
+      <th>exdate</th>
+      <th>last_date</th>
+      <th>cp_flag</th>
+      <th>strike_price</th>
+      <th>best_bid</th>
+      <th>best_offer</th>
+      <th>...</th>
+      <th>theta</th>
+      <th>optionid</th>
+      <th>cfadj</th>
+      <th>am_settlement</th>
+      <th>contract_size</th>
+      <th>ss_flag</th>
+      <th>forward_price</th>
+      <th>expiry_indicator</th>
+      <th>root</th>
+      <th>suffix</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>109820.0</td>
+      <td>2023-01-03</td>
+      <td>SPY 230120P410000</td>
+      <td>1</td>
+      <td>2023-01-20</td>
+      <td>2023-01-03</td>
+      <td>P</td>
+      <td>410000.0</td>
+      <td>28.8</td>
+      <td>29.06</td>
+      <td>...</td>
+      <td>&lt;NA&gt;</td>
+      <td>136011273.0</td>
+      <td>1.0</td>
+      <td>0.0</td>
+      <td>100.0</td>
+      <td>0</td>
+      <td>&lt;NA&gt;</td>
+      <td>&lt;NA&gt;</td>
+      <td>&lt;NA&gt;</td>
+      <td>&lt;NA&gt;</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>109820.0</td>
+      <td>2023-01-03</td>
+      <td>SPY 230120P411000</td>
+      <td>1</td>
+      <td>2023-01-20</td>
+      <td>2023-01-03</td>
+      <td>P</td>
+      <td>411000.0</td>
+      <td>29.8</td>
+      <td>30.06</td>
+      <td>...</td>
+      <td>&lt;NA&gt;</td>
+      <td>150272659.0</td>
+      <td>1.0</td>
+      <td>0.0</td>
+      <td>100.0</td>
+      <td>0</td>
+      <td>&lt;NA&gt;</td>
+      <td>&lt;NA&gt;</td>
+      <td>&lt;NA&gt;</td>
+      <td>&lt;NA&gt;</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>109820.0</td>
+      <td>2023-01-03</td>
+      <td>SPY 230120P412000</td>
+      <td>1</td>
+      <td>2023-01-20</td>
+      <td>2022-12-30</td>
+      <td>P</td>
+      <td>412000.0</td>
+      <td>30.8</td>
+      <td>31.06</td>
+      <td>...</td>
+      <td>&lt;NA&gt;</td>
+      <td>150272660.0</td>
+      <td>1.0</td>
+      <td>0.0</td>
+      <td>100.0</td>
+      <td>0</td>
+      <td>&lt;NA&gt;</td>
+      <td>&lt;NA&gt;</td>
+      <td>&lt;NA&gt;</td>
+      <td>&lt;NA&gt;</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>109820.0</td>
+      <td>2023-01-03</td>
+      <td>SPY 230120P413000</td>
+      <td>1</td>
+      <td>2023-01-20</td>
+      <td>2023-01-03</td>
+      <td>P</td>
+      <td>413000.0</td>
+      <td>31.8</td>
+      <td>32.06</td>
+      <td>...</td>
+      <td>&lt;NA&gt;</td>
+      <td>150272661.0</td>
+      <td>1.0</td>
+      <td>0.0</td>
+      <td>100.0</td>
+      <td>0</td>
+      <td>&lt;NA&gt;</td>
+      <td>&lt;NA&gt;</td>
+      <td>&lt;NA&gt;</td>
+      <td>&lt;NA&gt;</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>109820.0</td>
+      <td>2023-01-03</td>
+      <td>SPY 230120P414000</td>
+      <td>1</td>
+      <td>2023-01-20</td>
+      <td>2022-12-29</td>
+      <td>P</td>
+      <td>414000.0</td>
+      <td>32.8</td>
+      <td>33.06</td>
+      <td>...</td>
+      <td>&lt;NA&gt;</td>
+      <td>150272662.0</td>
+      <td>1.0</td>
+      <td>0.0</td>
+      <td>100.0</td>
+      <td>0</td>
+      <td>&lt;NA&gt;</td>
+      <td>&lt;NA&gt;</td>
+      <td>&lt;NA&gt;</td>
+      <td>&lt;NA&gt;</td>
+    </tr>
+  </tbody>
+</table>
+<p>5 rows × 26 columns</p>
+</div>
+
+list(op_df.columns)
+
+['secid',
+ 'date',
+ 'symbol',
+ 'symbol_flag',
+ 'exdate',
+ 'last_date',
+ 'cp_flag',
+ 'strike_price',
+ 'best_bid',
+ 'best_offer',
+ 'volume',
+ 'open_interest',
+ 'impl_volatility',
+ 'delta',
+ 'gamma',
+ 'vega',
+ 'theta',
+ 'optionid',
+ 'cfadj',
+ 'am_settlement',
+ 'contract_size',
+ 'ss_flag',
+ 'forward_price',
+ 'expiry_indicator',
+ 'root',
+ 'suffix']
+
+# Security price
+sp_df = pd.read_parquet(raw_data_path+ticker_name+date_name+"_security_price.parquet")
+sp_df.head()
+
+<div>
+<style scoped>
+    .dataframe tbody tr th:only-of-type {
+        vertical-align: middle;
+    }
+
+    .dataframe tbody tr th {
+        vertical-align: top;
+    }
+
+    .dataframe thead th {
+        text-align: right;
+    }
+</style>
+<table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>secid</th>
+      <th>date</th>
+      <th>low</th>
+      <th>high</th>
+      <th>close</th>
+      <th>volume</th>
+      <th>return</th>
+      <th>cfadj</th>
+      <th>open</th>
+      <th>cfret</th>
+      <th>shrout</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>109820.0</td>
+      <td>2023-01-03</td>
+      <td>377.831</td>
+      <td>386.43</td>
+      <td>380.82</td>
+      <td>74850731.0</td>
+      <td>-0.00421</td>
+      <td>1.0</td>
+      <td>384.37</td>
+      <td>1.62005</td>
+      <td>932632.0</td>
+    </tr>
+  </tbody>
+</table>
+</div>
+
+# Volatility surface
+vs_df = pd.read_parquet(raw_data_path+ticker_name+date_name+"_volatility_surface.parquet")
+vs_df.head()
+
+<div>
+<style scoped>
+    .dataframe tbody tr th:only-of-type {
+        vertical-align: middle;
+    }
+
+    .dataframe tbody tr th {
+        vertical-align: top;
+    }
+
+    .dataframe thead th {
+        text-align: right;
+    }
+</style>
+<table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>secid</th>
+      <th>date</th>
+      <th>days</th>
+      <th>delta</th>
+      <th>impl_volatility</th>
+      <th>impl_strike</th>
+      <th>impl_premium</th>
+      <th>dispersion</th>
+      <th>cp_flag</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>109820.0</td>
+      <td>2023-01-03</td>
+      <td>10.0</td>
+      <td>-90.0</td>
+      <td>0.194341</td>
+      <td>396.5254</td>
+      <td>16.09188</td>
+      <td>0.016883</td>
+      <td>P</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>109820.0</td>
+      <td>2023-01-03</td>
+      <td>10.0</td>
+      <td>-85.0</td>
+      <td>0.20004</td>
+      <td>394.1617</td>
+      <td>14.08037</td>
+      <td>0.016961</td>
+      <td>P</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>109820.0</td>
+      <td>2023-01-03</td>
+      <td>10.0</td>
+      <td>-80.0</td>
+      <td>0.205494</td>
+      <td>392.1157</td>
+      <td>12.463</td>
+      <td>0.016847</td>
+      <td>P</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>109820.0</td>
+      <td>2023-01-03</td>
+      <td>10.0</td>
+      <td>-75.0</td>
+      <td>0.210444</td>
+      <td>390.2253</td>
+      <td>11.07216</td>
+      <td>0.016971</td>
+      <td>P</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>109820.0</td>
+      <td>2023-01-03</td>
+      <td>10.0</td>
+      <td>-70.0</td>
+      <td>0.214993</td>
+      <td>388.4226</td>
+      <td>9.840296</td>
+      <td>0.017357</td>
+      <td>P</td>
+    </tr>
+  </tbody>
+</table>
+</div>
+
+# Standard Option Price
+sop_df = pd.read_parquet(raw_data_path+ticker_name+date_name+"_stdoption_price.parquet")
+sop_df.head()
+
+<div>
+<style scoped>
+    .dataframe tbody tr th:only-of-type {
+        vertical-align: middle;
+    }
+
+    .dataframe tbody tr th {
+        vertical-align: top;
+    }
+
+    .dataframe thead th {
+        text-align: right;
+    }
+</style>
+<table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>secid</th>
+      <th>date</th>
+      <th>days</th>
+      <th>forward_price</th>
+      <th>strike_price</th>
+      <th>premium</th>
+      <th>impl_volatility</th>
+      <th>delta</th>
+      <th>gamma</th>
+      <th>theta</th>
+      <th>vega</th>
+      <th>cp_flag</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>109820.0</td>
+      <td>2023-01-03</td>
+      <td>10.0</td>
+      <td>381.237881</td>
+      <td>381.237881</td>
+      <td>6.175776</td>
+      <td>0.24559</td>
+      <td>0.508104</td>
+      <td>0.025756</td>
+      <td>-120.143617</td>
+      <td>25.143701</td>
+      <td>C</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>109820.0</td>
+      <td>2023-01-03</td>
+      <td>10.0</td>
+      <td>381.237881</td>
+      <td>381.237881</td>
+      <td>5.805164</td>
+      <td>0.229798</td>
+      <td>-0.495411</td>
+      <td>0.027808</td>
+      <td>-98.697524</td>
+      <td>25.121911</td>
+      <td>P</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>109820.0</td>
+      <td>2023-01-03</td>
+      <td>30.0</td>
+      <td>382.10917</td>
+      <td>382.10917</td>
+      <td>9.701881</td>
+      <td>0.222775</td>
+      <td>0.512732</td>
+      <td>0.016389</td>
+      <td>-66.607316</td>
+      <td>43.537459</td>
+      <td>C</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>109820.0</td>
+      <td>2023-01-03</td>
+      <td>30.0</td>
+      <td>382.10917</td>
+      <td>382.10917</td>
+      <td>9.3854</td>
+      <td>0.213227</td>
+      <td>-0.494903</td>
+      <td>0.017553</td>
+      <td>-49.733154</td>
+      <td>43.419682</td>
+      <td>P</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>109820.0</td>
+      <td>2023-01-03</td>
+      <td>60.0</td>
+      <td>383.497985</td>
+      <td>383.497985</td>
+      <td>13.774894</td>
+      <td>0.223701</td>
+      <td>0.518081</td>
+      <td>0.011535</td>
+      <td>-49.679531</td>
+      <td>61.538878</td>
+      <td>C</td>
+    </tr>
+  </tbody>
+</table>
+</div>
+
+# Distribution Projection
+dp_df = pd.read_parquet(raw_data_path+ticker_name+date_name+"_distr_proj.parquet")
+dp_df.head()
+
+<div>
+<style scoped>
+    .dataframe tbody tr th:only-of-type {
+        vertical-align: middle;
+    }
+
+    .dataframe tbody tr th {
+        vertical-align: top;
+    }
+
+    .dataframe thead th {
+        text-align: right;
+    }
+</style>
+<table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>secid</th>
+      <th>date</th>
+      <th>exdate</th>
+      <th>amount</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>109820.0</td>
+      <td>2023-01-03</td>
+      <td>2023-03-17</td>
+      <td>0.004678</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>109820.0</td>
+      <td>2023-01-03</td>
+      <td>2023-06-16</td>
+      <td>0.004678</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>109820.0</td>
+      <td>2023-01-03</td>
+      <td>2023-09-15</td>
+      <td>0.004678</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>109820.0</td>
+      <td>2023-01-03</td>
+      <td>2023-12-15</td>
+      <td>0.004678</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>109820.0</td>
+      <td>2023-01-03</td>
+      <td>2024-03-15</td>
+      <td>0.004678</td>
+    </tr>
+  </tbody>
+</table>
+</div>
+
+# Zero Curve
+zc_df = pd.read_parquet(raw_data_path+date_name+"_zero_curve.parquet")
+zc_df.head()
+
+<div>
+<style scoped>
+    .dataframe tbody tr th:only-of-type {
+        vertical-align: middle;
+    }
+
+    .dataframe tbody tr th {
+        vertical-align: top;
+    }
+
+    .dataframe thead th {
+        text-align: right;
+    }
+</style>
+<table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>date</th>
+      <th>days</th>
+      <th>rate</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>2023-01-03</td>
+      <td>10.0</td>
+      <td>4.002951</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>2023-01-03</td>
+      <td>30.0</td>
+      <td>4.111739</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>2023-01-03</td>
+      <td>60.0</td>
+      <td>4.26291</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>2023-01-03</td>
+      <td>91.0</td>
+      <td>4.404409</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>2023-01-03</td>
+      <td>122.0</td>
+      <td>4.531454</td>
+    </tr>
+  </tbody>
+</table>
+</div>
+
+# Securd
+sc_df = pd.read_parquet(raw_data_path+ticker_name+"_securd.parquet")
+sc_df.head()
+
+<div>
+<style scoped>
+    .dataframe tbody tr th:only-of-type {
+        vertical-align: middle;
+    }
+
+    .dataframe tbody tr th {
+        vertical-align: top;
+    }
+
+    .dataframe thead th {
+        text-align: right;
+    }
+</style>
+<table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>secid</th>
+      <th>cusip</th>
+      <th>ticker</th>
+      <th>sic</th>
+      <th>index_flag</th>
+      <th>exchange_d</th>
+      <th>class</th>
+      <th>issue_type</th>
+      <th>industry_group</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>109820.0</td>
+      <td>78462F10</td>
+      <td>SPY</td>
+      <td>&lt;NA&gt;</td>
+      <td>0</td>
+      <td>1.0</td>
+      <td>&lt;NA&gt;</td>
+      <td>%</td>
+      <td>&lt;NA&gt;</td>
+    </tr>
+  </tbody>
+</table>
+</div>
