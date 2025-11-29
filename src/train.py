@@ -11,6 +11,7 @@ import torch.nn.functional as F
 from torch.utils.data import DataLoader, Dataset
 
 from black_scholes import bs_price
+from pinn_constraints import ConstraintConfig, compute_constraint_loss
 
 
 class IVPriceDataset(Dataset):
@@ -64,6 +65,12 @@ class TrainingConfig:
     target_col: str = "mid_price"
     input_cols: Sequence[str] = ("log_moneyness", "T")
     spot_constant: Optional[float] = None  # if not provided in dataset
+    # Constraint weights and knobs
+    lambda_calendar: float = 0.0
+    lambda_butterfly: float = 0.0
+    strike_bucket: float = 0.5
+    maturity_bucket_days: int = 1
+    min_points_per_bucket: int = 3
 
 
 def build_dataset_from_df(df, config: TrainingConfig) -> IVPriceDataset:
@@ -106,6 +113,17 @@ def price_mse_loss(
     device: torch.device,
 ) -> torch.Tensor:
     """Compute price MSE between BS(model sigma) and market mid price."""
+    _, pred_price, target_price, _, _, _, _, _, _ = forward_batch(model, batch, device=device)
+    return F.mse_loss(pred_price, target_price)
+
+
+def forward_batch(
+    model: nn.Module,
+    batch: Dict[str, torch.Tensor],
+    *,
+    device: torch.device,
+) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
+    """Run model and Black–Scholes pricing for a batch."""
     x = batch["x"].to(device)
     target_price = batch["price"].to(device)
     K = batch["K"].to(device)
@@ -117,9 +135,7 @@ def price_mse_loss(
     S_tensor = batch.get("S")
     S = S_tensor.to(device) if isinstance(S_tensor, torch.Tensor) else None
 
-    # Use spot per row; fallback to exp(log_moneyness)*K if missing
     if S is None:
-        # x[...,0] assumed log_moneyness = log(K/S) => S = K / exp(log_moneyness)
         log_m = x[..., 0]
         S = K / torch.exp(log_m)
 
@@ -134,7 +150,7 @@ def price_mse_loss(
         option_type=cp,
     ).squeeze(-1)
 
-    return F.mse_loss(pred_price, target_price)
+    return sigma_pred, pred_price, target_price, S, K, T, r, q, cp
 
 
 def train(
@@ -144,10 +160,10 @@ def train(
     config: TrainingConfig = TrainingConfig(),
 ) -> Dict[str, float]:
     """
-    Price-fitting training loop (no arbitrage/PINN constraints yet).
+    Price-fitting training loop with optional no-arbitrage constraints.
 
     Returns:
-        A metrics dictionary with final training loss.
+        A metrics dictionary with final training and constraint losses.
     """
     device = torch.device(config.device or ("cuda" if torch.cuda.is_available() else "cpu"))
     model.to(device)
@@ -155,24 +171,59 @@ def train(
     optimizer = torch.optim.Adam(model.parameters(), lr=config.learning_rate, weight_decay=config.weight_decay)
     loader = DataLoader(train_data, batch_size=config.batch_size, shuffle=True)
 
+    constraint_cfg = ConstraintConfig(
+        strike_bucket=config.strike_bucket,
+        maturity_bucket_days=config.maturity_bucket_days,
+        min_points_per_bucket=config.min_points_per_bucket,
+        lambda_calendar=config.lambda_calendar,
+        lambda_butterfly=config.lambda_butterfly,
+    )
+
     for epoch in range(config.epochs):
         epoch_loss = 0.0
+        epoch_price_loss = 0.0
+        epoch_constraint = 0.0
         sample_count = 0
         for batch in loader:
             optimizer.zero_grad()
-            loss = price_mse_loss(model, batch, device=device)
+            sigma_pred, pred_price, target_price, S, K, T, r, q, cp = forward_batch(model, batch, device=device)
+            price_loss = F.mse_loss(pred_price, target_price)
+
+            constraint_loss = torch.tensor(0.0, device=device)
+            if config.lambda_calendar > 0 or config.lambda_butterfly > 0:
+                constraint_loss, _ = compute_constraint_loss(
+                    sigma=sigma_pred,
+                    strikes=K,
+                    maturities=T,
+                    rates=r,
+                    dividends=q,
+                    spots=S,
+                    cp_flags=cp,
+                    config=constraint_cfg,
+                )
+
+            loss = price_loss + constraint_loss
             loss.backward()
             optimizer.step()
 
             batch_size = batch["x"].shape[0]
             epoch_loss += loss.item() * batch_size
+            epoch_price_loss += price_loss.item() * batch_size
+            epoch_constraint += constraint_loss.item() * batch_size
             sample_count += batch_size
 
         avg_loss = epoch_loss / max(sample_count, 1)
+        avg_price = epoch_price_loss / max(sample_count, 1)
+        avg_constraint = epoch_constraint / max(sample_count, 1)
         if (epoch + 1) % config.log_every == 0 or epoch == 0:
-            print(f"[Epoch {epoch+1:04d}] train_loss={avg_loss:.6f}")
+            print(
+                f"[Epoch {epoch+1:04d}] "
+                f"train_loss={avg_loss:.6f} "
+                f"price={avg_price:.6f} "
+                f"constraint={avg_constraint:.6f}"
+            )
 
-    return {"train_loss": avg_loss}
+    return {"train_loss": avg_loss, "price_loss": avg_price, "constraint_loss": avg_constraint}
 
 
 def save_checkpoint(model: nn.Module, path: str) -> None:
