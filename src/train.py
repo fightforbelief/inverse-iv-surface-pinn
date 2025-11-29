@@ -58,9 +58,15 @@ class IVPriceDataset(Dataset):
 class TrainingConfig:
     epochs: int = 50
     learning_rate: float = 1e-3
+    lr_step_size: int = 0  # 0 disables StepLR
+    lr_gamma: float = 0.5
     weight_decay: float = 0.0
     batch_size: int = 256
     log_every: int = 10
+    val_every: int = 10
+    early_stop_patience: int = 0  # 0 disables early stopping
+    early_stop_min_delta: float = 1e-4
+    checkpoint_path: Optional[str] = None
     device: Optional[str] = None  # "cuda" / "cpu"
     target_col: str = "mid_price"
     input_cols: Sequence[str] = ("log_moneyness", "T")
@@ -158,18 +164,27 @@ def train(
     train_data: Dataset,
     *,
     config: TrainingConfig = TrainingConfig(),
+    val_data: Optional[Dataset] = None,
 ) -> Dict[str, float]:
     """
-    Price-fitting training loop with optional no-arbitrage constraints.
+    Price-fitting training loop with optional no-arbitrage constraints, validation,
+    LR scheduling, early stopping, and checkpointing.
 
     Returns:
-        A metrics dictionary with final training and constraint losses.
+        A metrics dictionary with final training/constraint losses (and validation if provided).
     """
     device = torch.device(config.device or ("cuda" if torch.cuda.is_available() else "cpu"))
     model.to(device)
 
     optimizer = torch.optim.Adam(model.parameters(), lr=config.learning_rate, weight_decay=config.weight_decay)
     loader = DataLoader(train_data, batch_size=config.batch_size, shuffle=True)
+    val_loader = DataLoader(val_data, batch_size=config.batch_size) if val_data is not None else None
+
+    scheduler = (
+        torch.optim.lr_scheduler.StepLR(optimizer, step_size=config.lr_step_size, gamma=config.lr_gamma)
+        if config.lr_step_size and config.lr_step_size > 0
+        else None
+    )
 
     constraint_cfg = ConstraintConfig(
         strike_bucket=config.strike_bucket,
@@ -178,6 +193,13 @@ def train(
         lambda_calendar=config.lambda_calendar,
         lambda_butterfly=config.lambda_butterfly,
     )
+
+    best_val = float("inf")
+    patience_counter = 0
+    best_state = None
+
+    def _eval_loader(dl: DataLoader) -> Dict[str, float]:
+        return evaluate(model, dl, device=device, constraint_cfg=constraint_cfg, lambda_calendar=config.lambda_calendar, lambda_butterfly=config.lambda_butterfly)
 
     for epoch in range(config.epochs):
         epoch_loss = 0.0
@@ -215,15 +237,49 @@ def train(
         avg_loss = epoch_loss / max(sample_count, 1)
         avg_price = epoch_price_loss / max(sample_count, 1)
         avg_constraint = epoch_constraint / max(sample_count, 1)
-        if (epoch + 1) % config.log_every == 0 or epoch == 0:
-            print(
+        if scheduler is not None:
+            scheduler.step()
+
+        # Logging
+        do_log = (epoch + 1) % config.log_every == 0 or epoch == 0
+        val_metrics = None
+        if val_loader is not None and ((epoch + 1) % config.val_every == 0 or epoch == 0):
+            val_metrics = _eval_loader(val_loader)
+
+        if do_log:
+            msg = (
                 f"[Epoch {epoch+1:04d}] "
                 f"train_loss={avg_loss:.6f} "
                 f"price={avg_price:.6f} "
                 f"constraint={avg_constraint:.6f}"
             )
+            if val_metrics:
+                msg += f" | val_loss={val_metrics['loss']:.6f} price={val_metrics['price_loss']:.6f} constraint={val_metrics['constraint_loss']:.6f}"
+            print(msg)
 
-    return {"train_loss": avg_loss, "price_loss": avg_price, "constraint_loss": avg_constraint}
+        # Early stopping on validation loss
+        if val_metrics is not None:
+            current_val = val_metrics["loss"]
+            if current_val + config.early_stop_min_delta < best_val:
+                best_val = current_val
+                patience_counter = 0
+                best_state = model.state_dict()
+                if config.checkpoint_path:
+                    save_checkpoint(model, config.checkpoint_path)
+            else:
+                patience_counter += 1
+                if config.early_stop_patience and patience_counter >= config.early_stop_patience:
+                    print(f"Early stopping at epoch {epoch+1} (best val_loss={best_val:.6f})")
+                    break
+
+    # Restore best state if captured
+    if best_state is not None:
+        model.load_state_dict(best_state)
+
+    result = {"train_loss": avg_loss, "price_loss": avg_price, "constraint_loss": avg_constraint}
+    if val_metrics is not None:
+        result.update({f"val_{k}": v for k, v in val_metrics.items()})
+    return result
 
 
 def save_checkpoint(model: nn.Module, path: str) -> None:
@@ -236,3 +292,49 @@ def load_checkpoint(model: nn.Module, path: str, *, map_location: Optional[str] 
     state = torch.load(path, map_location=map_location)
     model.load_state_dict(state)
     return model
+
+
+@torch.no_grad()
+def evaluate(
+    model: nn.Module,
+    data_loader: DataLoader,
+    *,
+    device: torch.device,
+    constraint_cfg: ConstraintConfig,
+    lambda_calendar: float,
+    lambda_butterfly: float,
+) -> Dict[str, float]:
+    """Evaluate losses on a dataset (price + constraints)."""
+    model.eval()
+    total = 0
+    total_price = 0.0
+    total_constraint = 0.0
+    total_samples = 0
+
+    for batch in data_loader:
+        sigma_pred, pred_price, target_price, S, K, T, r, q, cp = forward_batch(model, batch, device=device)
+        price_loss = F.mse_loss(pred_price, target_price, reduction="sum")
+        constraint_loss = torch.tensor(0.0, device=device)
+        if lambda_calendar > 0 or lambda_butterfly > 0:
+            constraint_loss, _ = compute_constraint_loss(
+                sigma=sigma_pred,
+                strikes=K,
+                maturities=T,
+                rates=r,
+                dividends=q,
+                spots=S,
+                cp_flags=cp,
+                config=constraint_cfg,
+            )
+            constraint_loss = constraint_loss * K.shape[0]  # sum-style
+
+        total += (price_loss + constraint_loss).item()
+        total_price += price_loss.item()
+        total_constraint += constraint_loss.item()
+        total_samples += K.shape[0]
+
+    return {
+        "loss": total / max(total_samples, 1),
+        "price_loss": total_price / max(total_samples, 1),
+        "constraint_loss": total_constraint / max(total_samples, 1),
+    }

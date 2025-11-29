@@ -1,0 +1,43 @@
+{
+  "training_config": {
+    "epochs": 50,
+    "learning_rate": 0.001,
+    "lr_step_size": 0,
+    "lr_gamma": 0.5,
+    "weight_decay": 1e-06,
+    "batch_size": 256,
+    "log_every": 5,
+    "val_every": 5,
+    "early_stop_patience": 0,
+    "early_stop_min_delta": 0.0001,
+    "checkpoint_path": "/Users/alex/Desktop/inverse-iv-surface-pinn/models/SPY_20230103_ivsurface.pt",
+    "device": null,
+    "target_col": "mid_price",
+    "input_cols": [
+      "log_moneyness",
+      "T"
+    ],
+    "spot_constant": null,
+    "lambda_calendar": 0.1,
+    "lambda_butterfly": 0.1,
+    "strike_bucket": 0.5,
+    "maturity_bucket_days": 7,
+    "min_points_per_bucket": 3
+  },
+  "model_config": {
+    "input_dim": 2,
+    "hidden_dims": [
+      128,
+      128,
+      64
+    ],
+    "activation": "silu",
+    "dropout": 0.05,
+    "output_activation": "softplus",
+    "min_sigma": 0.0001,
+    "max_sigma": 5.0,
+    "weight_init": "xavier"
+  },
+  "ticker": "SPY",
+  "date": "20230103"
+}
