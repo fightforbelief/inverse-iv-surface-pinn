@@ -1,6 +1,7 @@
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
+import torch
 from matplotlib import cm
 from mpl_toolkits.mplot3d import Axes3D
 import seaborn as sns
@@ -401,3 +402,33 @@ def summarize_data_characteristics(df: pd.DataFrame) -> dict:
     }
     
     return summary
+
+
+
+def plot_market_vs_model_smile(df_sample, model, device, target_T, title="IV Smile"):
+
+    market_subset = df_sample[ (df_sample['T'] > target_T - 0.02) & (df_sample['T'] < target_T + 0.02) ]
+    
+    k_range = np.linspace(0.7, 1.3, 100)
+    t_fixed = np.full_like(k_range, target_T)
+    
+    log_k = np.log(k_range) 
+    inputs = torch.tensor(np.stack([log_k, t_fixed], axis=1), dtype=torch.float32).to(device)
+    
+    model.eval()
+    with torch.no_grad():
+        pred_iv = model(inputs).cpu().numpy().flatten()
+        
+    plt.figure(figsize=(10, 6))
+    
+    sns.scatterplot(x=market_subset['moneyness'], y=market_subset['computed_iv'], 
+                    color='red', label='Market Data (Noise)', alpha=0.6)
+    
+    plt.plot(k_range, pred_iv, color='blue', linewidth=2, label='PINN Reconstruction (Smooth)')
+    
+    plt.title(f"{title} (T={target_T:.2f} Yrs)")
+    plt.xlabel("Moneyness (K/S)")
+    plt.ylabel("Implied Volatility")
+    plt.legend()
+    plt.grid(True, alpha=0.3)
+    return plt

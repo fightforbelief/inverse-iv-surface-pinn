@@ -1,11 +1,19 @@
-# Core scientific stack
+# inverse-iv-surface-pinn project requirements
+
+# Core scientific computing and data analysis libraries
 numpy
 pandas
 scipy
 
-# Modeling / deep learning
+# Machine learning framework (PyTorch is the core ML library)
 torch
 
-# Visualization
+# Data visualization
 matplotlib
 seaborn
+
+# Optional: Data fetching from WRDS (Wharton Research Data Services)
+# The notebooks reference WRDS for data loading.
+wrds
+
+pyarrow

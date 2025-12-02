@@ -6,11 +6,11 @@
     "lr_gamma": 0.5,
     "weight_decay": 1e-06,
     "batch_size": 256,
-    "log_every": 5,
-    "val_every": 5,
+    "log_every": 10,
+    "val_every": 10,
     "early_stop_patience": 0,
     "early_stop_min_delta": 0.0001,
-    "checkpoint_path": "/Users/alex/Desktop/inverse-iv-surface-pinn/models/SPY_20230103_ivsurface.pt",
+    "checkpoint_path": "/Users/alex/Desktop/inverse-iv-surface-pinn/models/SPY_20230103_pinn.pt",
     "device": null,
     "target_col": "mid_price",
     "input_cols": [
@@ -18,8 +18,8 @@
       "T"
     ],
     "spot_constant": null,
-    "lambda_calendar": 0.0,
-    "lambda_butterfly": 0.0,
+    "lambda_calendar": 1e-05,
+    "lambda_butterfly": 1e-05,
     "strike_bucket": 0.5,
     "maturity_bucket_days": 7,
     "min_points_per_bucket": 3
